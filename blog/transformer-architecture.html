@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Transformer Architecture - Ahmed Eldaw</title>
+    <meta name="description" content="A deep dive into the transformer architecture and its applications in modern NLP tasks by Ahmed Eldaw Mohamed">
+    
+    <!-- Favicon -->
+    <link href="../assets/img/3.png" rel="icon">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    
+    <!-- Custom CSS -->
+    <link href="../assets/css/page-style.css" rel="stylesheet">
+    <link href="../assets/css/blog-post.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../pages/about.html">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../pages/publications.html">Publications</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="../pages/blog.html">Blog</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="blog-post-content">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <!-- Article Header -->
+                    <header class="blog-header">
+                        <a href="../pages/blog.html" class="back-link">
+                            <i class="fas fa-arrow-left"></i> Back to Blog
+                        </a>
+                        
+                        <h1 class="blog-title">Understanding Transformer Architecture</h1>
+                        
+                        <div class="blog-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>March 15, 2025</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span>8 min read</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-tag"></i>
+                                <span>Machine Learning, NLP</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <!-- Article Content -->
+                    <article class="blog-content">
+                        <p class="lead">
+                            The transformer architecture revolutionized natural language processing and became the foundation 
+                            for most state-of-the-art models. Let's explore how attention mechanisms work and why transformers 
+                            are so powerful.
+                        </p>
+
+                        <h2>What Are Transformers?</h2>
+                        <p>
+                            Transformers are a neural network architecture introduced in the paper "Attention Is All You Need" 
+                            by Vaswani et al. in 2017. Unlike recurrent neural networks (RNNs) or convolutional neural networks (CNNs), 
+                            transformers rely entirely on attention mechanisms to process sequential data.
+                        </p>
+
+                        <h2>The Self-Attention Mechanism</h2>
+                        <p>
+                            The core innovation of transformers is the self-attention mechanism. This allows the model to 
+                            weigh the importance of different parts of the input sequence when processing each element.
+                        </p>
+
+                        <h3>How Self-Attention Works</h3>
+                        <p>For each position in the sequence, self-attention:</p>
+                        <ol>
+                            <li><strong>Creates queries, keys, and values</strong> from the input embeddings</li>
+                            <li><strong>Computes attention scores</strong> between queries and keys</li>
+                            <li><strong>Applies softmax</strong> to get attention weights</li>
+                            <li><strong>Weights the values</strong> to produce the output</li>
+                        </ol>
+
+                        <div class="code-block">
+                            <pre><code class="python">
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SelfAttention(nn.Module):
+    def __init__(self, embed_size, heads):
+        super(SelfAttention, self).__init__()
+        self.embed_size = embed_size
+        self.heads = heads
+        self.head_dim = embed_size // heads
+        
+        self.queries = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.keys = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.fc_out = nn.Linear(heads * self.head_dim, embed_size)
+        
+    def forward(self, values, keys, query, mask):
+        N = query.shape[0]  # Number of training examples
+        value_len, key_len, query_len = values.shape[1], keys.shape[1], query.shape[1]
+        
+        # Split embedding into self.heads pieces
+        values = values.reshape(N, value_len, self.heads, self.head_dim)
+        keys = keys.reshape(N, key_len, self.heads, self.head_dim)
+        queries = query.reshape(N, query_len, self.heads, self.head_dim)
+        
+        # Get Q, K, V
+        queries = self.queries(queries)
+        keys = self.keys(keys)
+        values = self.values(values)
+        
+        # Compute attention scores
+        energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
+        
+        if mask is not None:
+            energy = energy.masked_fill(mask == 0, float("-1e20"))
+            
+        attention = torch.softmax(energy / (self.embed_size ** (1/2)), dim=3)
+        
+        out = torch.einsum("nhql,nlhd->nqhd", [attention, values]).reshape(
+            N, query_len, self.heads * self.head_dim
+        )
+        
+        return self.fc_out(out)
+                            </code></pre>
+                        </div>
+
+                        <h2>Multi-Head Attention</h2>
+                        <p>
+                            Multi-head attention runs multiple attention mechanisms in parallel, each focusing on 
+                            different aspects of the relationships in the data. This allows the model to capture 
+                            various types of dependencies simultaneously.
+                        </p>
+
+                        <h2>Position Encoding</h2>
+                        <p>
+                            Since transformers don't have inherent notion of sequence order (unlike RNNs), they use 
+                            positional encoding to inject information about the position of tokens in the sequence.
+                        </p>
+
+                        <h2>The Complete Architecture</h2>
+                        <p>
+                            A complete transformer consists of:
+                        </p>
+                        <ul>
+                            <li><strong>Encoder stack:</strong> Multiple layers of self-attention and feed-forward networks</li>
+                            <li><strong>Decoder stack:</strong> Similar to encoder but with masked self-attention</li>
+                            <li><strong>Residual connections:</strong> Help with gradient flow during training</li>
+                            <li><strong>Layer normalization:</strong> Stabilizes training</li>
+                        </ul>
+
+                        <h2>Why Transformers Work So Well</h2>
+                        <p>
+                            Transformers have several advantages:
+                        </p>
+                        <ul>
+                            <li><strong>Parallelization:</strong> Unlike RNNs, all positions can be processed simultaneously</li>
+                            <li><strong>Long-range dependencies:</strong> Direct connections between any two positions</li>
+                            <li><strong>Interpretability:</strong> Attention weights provide insights into model behavior</li>
+                            <li><strong>Scalability:</strong> Performance improves with more data and parameters</li>
+                        </ul>
+
+                        <h2>Applications and Impact</h2>
+                        <p>
+                            Transformers have enabled breakthrough models like:
+                        </p>
+                        <ul>
+                            <li><strong>BERT:</strong> Bidirectional encoder representations</li>
+                            <li><strong>GPT series:</strong> Generative pre-trained transformers</li>
+                            <li><strong>T5:</strong> Text-to-text transfer transformer</li>
+                            <li><strong>Vision transformers:</strong> Applied to computer vision tasks</li>
+                        </ul>
+
+                        <h2>Conclusion</h2>
+                        <p>
+                            The transformer architecture represents a paradigm shift in how we approach sequence modeling. 
+                            By relying solely on attention mechanisms, transformers have achieved state-of-the-art results 
+                            across numerous NLP tasks and continue to be the foundation for the most advanced AI models today.
+                        </p>
+
+                        <p>
+                            Understanding transformers is crucial for anyone working in modern AI, as they form the backbone 
+                            of large language models and many other cutting-edge applications.
+                        </p>
+                    </article>
+
+                    <!-- Article End Section
+                    <div class="article-end">
+                        <div class="article-meta">
+                            <div class="reading-time">
+                                <i class="fas fa-clock"></i>
+                                <span>Reading time: ~15 minutes</span>
+                            </div>
+                            <div class="article-date">
+                                <i class="fas fa-calendar"></i>
+                                <span>Published: January 15, 2025</span>
+                            </div>
+                        </div> -->
+
+                        <!-- Social Sharing
+                        <div class="social-sharing">
+                            <h4>Share this article</h4>
+                            <div class="share-buttons">
+                                <a href="#" class="share-btn twitter" onclick="shareOnTwitter()">
+                                    <i class="fab fa-twitter"></i> Twitter
+                                </a>
+                                <a href="#" class="share-btn linkedin" onclick="shareOnLinkedIn()">
+                                    <i class="fab fa-linkedin"></i> LinkedIn
+                                </a>
+                                <a href="#" class="share-btn copy" onclick="copyLink()">
+                                    <i class="fas fa-link"></i> Copy Link
+                                </a>
+                            </div>
+                        </div> -->
+
+                        <!-- Feedback Section -->
+                        <div class="feedback-section">
+                            <h4>Found an issue or have feedback?</h4>
+                            <p>If you notice any errors, have suggestions for improvements, or want to discuss this article, I'd love to hear from you!</p>
+                            <a href="mailto:feedback@ahmedeldaw.com?subject=Feedback: Understanding the Transformer Architecture&body=Hi Ahmed,%0A%0AI have feedback about your article 'Understanding the Transformer Architecture':%0A%0A[Your feedback here]%0A%0AThanks!" class="btn btn-outline-primary">
+                                <i class="fas fa-envelope"></i> Send Feedback
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    
+    <!-- Custom JS -->
+    <script src="../assets/js/blog-post.js"></script>
+</body>
+</html> 
